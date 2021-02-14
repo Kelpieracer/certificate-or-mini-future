@@ -49,8 +49,8 @@ if __name__ == '__main__':
             {
                 'symbol': symbol,
                 'variability': var,
-                'futu_gain': futu_gain - 1,
-                'cert_gain': cert_gain - 1,
+                'futu_profit': futu_gain,
+                'cert_profit': cert_gain,
                 'start_date': df.head(1).index[0].strftime('%Y-%m-%d'),
                 'end_date': df.tail(1).index[0].strftime('%Y-%m-%d'),
                 'var_start_date': var_df.head(1).index[0].strftime('%Y-%m-%d')})

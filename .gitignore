@@ -1,2 +1,3 @@
-/variabilities.csv
+*.csv
+*.xls
 /__pycache__

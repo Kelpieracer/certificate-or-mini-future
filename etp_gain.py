@@ -7,9 +7,16 @@ def etp_gain(df, leverage):
     pricelist = df.tolist()
     # Certificate gains depend on previous value
     cert_gain = 1
+
     # Future leverage is variable, and it depends on stoploss level
     futu_stop_loss = pricelist[0] * (1 - 1/leverage)
     futu_gain = 1
+
+    # Interest from Nordnet pricelist https://www.nordnet.fi/fi/markkina/nordnet-markets/kulut-ja-palkkiot
+    cert_interest_rate = 0.01 if leverage < 5 else (
+        0.03 if leverage > 5 else 0.015)
+    cert_interest_per_day = (leverage - 1) * cert_interest_rate / 360
+    futu_interest_per_day = 0.03 / 360
 
     # Loop through all the days in the holding period
     for today in range(0, len(df)-1):
@@ -18,62 +25,30 @@ def etp_gain(df, leverage):
 
         # Calculate certificate gain for the day
         cert_gain_today = raw_gain * leverage
-        cert_gain *= 1 + cert_gain_today
+        cert_gain *= 1 + cert_gain_today - cert_interest_per_day
 
         # Calculate future gain for the day from leverage of current day
         futu_leverage = pricelist[today] / (pricelist[today] - futu_stop_loss)
         futu_gain_today = raw_gain * futu_leverage
-        futu_gain * 1 + futu_gain_today
+        futu_gain *= 1 + futu_gain_today - futu_interest_per_day
 
     # Both Mini-Future and Certificate will knock, i.e. they will not go below zero
     return max(0, futu_gain), max(0, cert_gain)
 
 
 if __name__ == '__main__':
-    df = pd.DataFrame([1, 1, 1], columns=['adjclose'])
-    l = 1
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
 
-    df = pd.DataFrame([1, 2], columns=['adjclose'])
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
+    ticker = 'JBSIEA.SW'  # 'ZSILEU.SW'
 
-    df = pd.DataFrame([1, 2, 3], columns=['adjclose'])
-    l = 2
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
-
-    df = pd.DataFrame([1, 2, 3], columns=['adjclose'])
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
-
-    df = pd.DataFrame([1, 2, 1], columns=['adjclose'])
-    l = 1
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
-
-    df = pd.DataFrame([1, 2, 1], columns=['adjclose'])
-    l = 2
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
-
-    df = pd.DataFrame([1, 2, 4, 5, 6], columns=['adjclose'])
-    l = 2
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
-
-    df = pd.DataFrame([1, 1.1, 1.2, 1.1, 1.3], columns=['adjclose'])
-    l = 5
-    f, c = etp_gain(df['adjclose'], l)
-    print(f'prices {df["adjclose"].tolist()}   lev {l}   futu {f}    cert {c}')
-
-    df = si.get_data('NOKIA.HE', start_date='2010-01-01',
-                     end_date='2020-01-01').dropna()['adjclose']
+    df = si.get_data(ticker, start_date='2020-02-13',
+                     end_date='2222-01-01').dropna()['adjclose']
     columns = ['futu', 'cert']
     df_out = pd.DataFrame(columns=columns)
-    HOLDING_TIME = 5        # days
+    HOLDING_TIME = len(df)-1        # days
     LEVERAGE = 5
+
+    print(df)
+
     for today in range(0, len(df) - HOLDING_TIME):
         futu_gain, cert_gain = etp_gain(
             df[list(range(today, today + HOLDING_TIME + 1))], LEVERAGE)
@@ -81,4 +56,4 @@ if __name__ == '__main__':
             {'futu': futu_gain, 'cert': cert_gain}, index=[today], columns=columns)
         df_out = df_out.append(new_df)
     print(df_out)
-    df_out.to_csv('test.csv')
+    df_out.to_csv(f'{ticker}.csv')
